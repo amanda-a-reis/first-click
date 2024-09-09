@@ -119,7 +119,7 @@
           return;
         }
 
-        socket = new WebSocket("ws://halved-meadow-sign.glitch.me");
+        socket = new WebSocket("wss://halved-meadow-sign.glitch.me");
 
         socket.addEventListener("open", () => {
           socket.send(JSON.stringify({ sessionId, nickname }));
