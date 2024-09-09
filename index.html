@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste - Primeiro Click</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f4f4f4;
+      }
+      h3 {
+        color: #333;
+      }
+      input {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #voteButton {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h3 id="message">Escolha uma opção</h3>
+    <div id="initialOptions">
+      <button id="createSession">Criar Sessão</button>
+      <button id="joinExistingSession">Entrar em Sessão Existente</button>
+    </div>
+
+    <div id="form" style="display: none">
+      <input type="text" id="sessionId" placeholder="Digite o ID da Sessão" />
+      <input type="text" id="nickname" placeholder="Digite seu nickname" />
+      <button id="joinSession">Entrar na Sessão</button>
+    </div>
+
+    <button id="voteButton" style="display: none">Click</button>
+
+    <script>
+      let socket;
+      let sessionId;
+      let nickname;
+
+      async function createSession() {
+        try {
+          const response = await fetch(
+            "https://halved-meadow-sign.glitch.me/create-session",
+            {
+              method: "POST",
+              header: {
+                "user-agent": "Mozilla",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Erro ao criar sessão");
+          }
+
+          const data = await response.json();
+
+          sessionId = data.sessionId;
+
+          document.getElementById("sessionId").value = sessionId;
+
+          document.getElementById("sessionId").readOnly = true;
+
+          document.getElementById(
+            "message"
+          ).textContent = `Sessão criada: ${sessionId}. Compartilhe esse ID com outros jogadores.`;
+
+          showJoinForm();
+        } catch (error) {
+          document.getElementById("message").textContent =
+            "Erro ao criar sessão.";
+        }
+      }
+
+      function showJoinForm() {
+        document.getElementById("initialOptions").style.display = "none";
+        document.getElementById("form").style.display = "block";
+      }
+
+      document
+        .getElementById("createSession")
+        .addEventListener("click", createSession);
+
+      document
+        .getElementById("joinExistingSession")
+        .addEventListener("click", showJoinForm);
+
+      document.getElementById("joinSession").addEventListener("click", () => {
+        nickname = document.getElementById("nickname").value;
+        sessionId = document.getElementById("sessionId").value;
+
+        if (!sessionId || !nickname) {
+          document.getElementById("message").textContent =
+            "Por favor, insira o ID da Sessão e o seu nickname.";
+          return;
+        }
+
+        socket = new WebSocket("ws://halved-meadow-sign.glitch.me");
+
+        socket.addEventListener("open", () => {
+          socket.send(JSON.stringify({ sessionId, nickname }));
+        });
+
+        socket.addEventListener("message", (event) => {
+          const data = JSON.parse(event.data);
+          document.getElementById("message").textContent = data.message;
+        });
+
+        document.getElementById("form").style.display = "none";
+        document.getElementById("voteButton").style.display = "block";
+      });
+
+      document
+        .getElementById("voteButton")
+        .addEventListener("click", async function () {
+          try {
+            const response = await fetch(
+              "https://halved-meadow-sign.glitch.me/click",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "user-agent": "Mozilla",
+                },
+                body: JSON.stringify({ sessionId, nickname }),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error("Erro na requisição");
+            }
+
+            const data = await response.json();
+            console.log("Voto registrado:", data.message);
+          } catch (error) {
+            document.getElementById("message").textContent =
+              "Ocorreu um erro ao registrar o voto.";
+            console.error("Erro:", error);
+          }
+        });
+    </script>
+  </body>
+</html>
